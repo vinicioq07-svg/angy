@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0F4C81">
+  <title>Angy — Gestión Avícola</title>
+  
+  <!-- Fuentes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="estilos.css">
+  
+  <!-- Librerías -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" onerror="window._chartError = true;"></script>
+</head>
+<body>
+<!-- ================= PANTALLA DE LOGIN ================= -->
+<div id="pantallaLogin" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--azul-muy-claro); width: 100vw; position: fixed; top: 0; left: 0; z-index: 9999;">
+  
+  <div style="background: var(--blanco); padding: 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 400px; text-align: center;">
+    <img src="logo.png" alt="Angy" style="width: 60px; margin-bottom: 15px;">
+    <h2 style="font-family: 'Fraunces', serif; color: var(--azul-profundo); margin-bottom: 5px;">Bienvenido a Angy</h2>
+    <p style="color: var(--texto-secundario); font-size: 14px; margin-bottom: 25px;">Ingresa tus credenciales para continuar</p>
+
+    <form id="formLogin" onsubmit="event.preventDefault(); iniciarSesion();">
+      <div style="margin-bottom: 15px; text-align: left;">
+        <label style="font-size: 13px; font-weight: 600;">Correo Electrónico</label>
+        <input type="email" id="loginEmail" placeholder="ejemplo@correo.com" required style="width: 100%; padding: 12px; margin-top: 5px; border: 1px solid var(--borde); border-radius: 8px;">
+      </div>
+      
+      <div style="margin-bottom: 25px; text-align: left;">
+        <label style="font-size: 13px; font-weight: 600;">Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" required style="width: 100%; padding: 12px; margin-top: 5px; border: 1px solid var(--borde); border-radius: 8px;">
+      </div>
+
+      <button type="submit" style="width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; background: var(--azul-principal); color: white; border: none; cursor: pointer;">Iniciar Sesión</button>
+    </form>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- SIDEBAR ESCRITORIO -->
+<aside class="sidebar" id="sidebarEscritorio">
+  <div class="brand">
+    <img src="logo.png" alt="Angy" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+    <span class="logo-dot" style="display:none;"></span>
+    <span class="brand-texto">Angy</span>
+  </div>
+  <div class="nav-item active" data-tab="dashboard" onclick="mostrarTab('dashboard', this)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+    </svg>
+    Dashboard
+  </div>
+  <div class="nav-item" data-tab="lotes" onclick="mostrarTab('lotes', this)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    Galpones
+  </div>
+  <div class="nav-item" data-tab="config" id="navConfig" onclick="mostrarTab('config', this)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+    Configuración
+  </div>
+</aside>
+
+<!-- BOTTOM NAV MÓVIL -->
+<nav class="bottom-nav" id="bottomNav">
+  <div class="nav-items">
+    <button class="nav-item active" data-tab="dashboard" onclick="mostrarTab('dashboard', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      <span>Inicio</span>
+    </button>
+    <button class="nav-item" data-tab="lotes" onclick="mostrarTab('lotes', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span>Galpones</span>
+    </button>
+    <button class="nav-item" data-tab="config" id="navConfigMovil" onclick="mostrarTab('config', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span>Config</span>
+    </button>
+  </div>
+</nav>
+
+<main class="main">
+
+  <header class="topbar">
+    <div>
+      <div id="contenedorGranja"><h2>Granja Los Tíos</h2></div>
+      <div class="empresa" id="infoLote">
+        Galpón 4, Lado A · Lote 4 (reproductor) · Nacimiento 2019-09-26 · Aves inicial: 4,940 H + 490 M · <b>Semana <span class="semana-num">36</span></b>
+      </div>
+    </div>
+         <!-- <div class="topbar-controles">
+        <label id="labelGalponAsignado" class="label-inline" style="display:none;">Simular galponero:
+          <select id="selectorGalponAsignado" onchange="aplicarRol()"></select>
+        </label>
+        <label class="label-inline">Viendo como:
+          <select id="selectorRol" onchange="aplicarRol()">
+            <option value="admin">Administrador</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="galponero">Galponero</option>
+          </select>
+        </label>
+        <span class="badge-demo">Borrador — datos de ejemplo</span> -->
+        
+        <!-- AGREGA EL BOTÓN DE CERRAR SESIÓN AQUÍ -->
+        <button onclick="cerrarSesion()" style="background: #E53935; color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; margin-left: 10px; border: none; cursor: pointer;">
+          Cerrar Sesión
+        </button>
+      </div> <!-- Este es el cierre del topbar-controles (antes línea 125) -->
+
+    </div>
+  </header>
+
+  <!-- TAB DASHBOARD -->
+  <section id="tab-dashboard" class="tab-content active">
+    <div class="panel" id="panelResumenDashboard">
+      <h3>Resumen — <span id="nombreGranjaDashboard">Granja Los Tíos</span></h3>
+      <div class="sub">Un vistazo rápido de cada galpón. Haz clic en uno para ver el detalle completo.</div>
+      <div id="gridResumenDashboard" class="grid-cards"></div>
+    </div>
+
+    <div class="panel" id="panelRanking">
+      <h3>Comparativa entre lotes</h3>
+      <div class="sub">Lotes activos del mismo tipo, ordenados de mejor a peor mortalidad acumulada</div>
+      <div id="contenidoRanking"></div>
+    </div>
+
+    <div id="panelDetalleDashboard" style="display:none;">
+      <div class="volver" onclick="volverAResumenDashboard()">← Volver al resumen</div>
+      <div id="kpisDetalleDashboard" class="kpis"></div>
+      <div id="graficasDetalleDashboard"></div>
+    </div>
+  </section>
+
+  <!-- TAB GALPONES -->
+  <section id="tab-lotes" class="tab-content">
+    <div class="panel">
+      <h3>Galpones</h3>
+      <div class="sub">Elige un galpón para ir a sus registros, o inicia un lote nuevo</div>
+      <div id="gridGalpones" class="grid-cards"></div>
+      <div class="botones-fila">
+        <button id="btnNuevoGalpon" onclick="toggleFormNuevoGalpon()">+ Agregar galpón</button>
+        <button id="btnNuevoLote" onclick="toggleFormNuevoLote()">+ Iniciar lote nuevo</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panelNuevoGalpon" style="display:none; max-width:420px;">
+      <h3>Agregar galpón</h3>
+      <div class="sub">Registra la estructura física — todavía sin ningún lote asignado</div>
+      <form onsubmit="event.preventDefault(); crearGalpon();">
+        <div class="campo"><label>Nombre del galpón</label><input type="text" id="ngNombre" placeholder="Ej: Galpón 5"></div>
+        <button type="submit">Crear galpón</button>
+      </form>
+    </div>
+
+    <div class="panel" id="panelLotesCerrados" style="display:none;">
+      <div class="panel-header-con-boton">
+        <h3 id="tituloHistorialGalpon">Historial de lotes</h3>
+        <button class="btn-secundario" onclick="document.getElementById('panelLotesCerrados').style.display='none'">Cerrar</button>
+      </div>
+      <div class="sub">Todos los ciclos de este galpón, del más antiguo al más reciente — solo administradores</div>
+      <div id="comparativaLotesGalpon"></div>
+      <div id="contenedorChartHistorialGalpon" style="display:none;">
+        <canvas id="chartHistorialGalpon"></canvas>
+      </div>
+      <div id="listaCerrados" class="sub"></div>
+    </div>
+
+    <div class="panel" id="panelDetalleCerrado" style="display:none;">
+      <div class="panel-header-con-boton">
+        <h3 id="tituloDetalleCerrado">Detalle del lote</h3>
+        <button class="btn-secundario" onclick="document.getElementById('panelDetalleCerrado').style.display='none'">Cerrar</button>
+      </div>
+     <div class="sub">Historial completo del lote finalizado — de solo lectura</div>
+      <div id="contenidoDetalleCerrado"></div>
+    </div>
+
+    <div class="panel" id="panelNuevoLote" style="display:none;">
+      <h3 id="tituloNuevoLote">Iniciar lote nuevo</h3>
+      <div class="sub">Elige el galpón disponible y el tipo de crianza — esto determina qué formulario de registro se usará</div>
+      <form onsubmit="event.preventDefault(); crearLote();">
+        <div class="fila-campos">
+          <div class="campo" id="campoSelectGalpon">
+            <label>Galpón</label>
+            <select id="nlGalponId"></select>
+          </div>
+          <div class="campo" id="campoNombreGalpon" style="display:none;">
+            <label>Galpón</label>
+            <input type="text" id="nlGalpon" disabled>
+          </div>
+          <div class="campo"><label>Fecha de ingreso / nacimiento</label><input type="date" id="nlFecha"></div>
+        </div>
+
+        <div class="campo">
+          <label>Tipo de crianza</label>
+          <select id="nlTipo" onchange="actualizarCamposNuevoLote()">
+            <option value="engorde">Engorde (pollos de carne)</option>
+            <option value="ponedora">Ponedora — huevo comercial</option>
+            <option value="reproductora">Reproductora — huevo fértil</option>
+          </select>
+        </div>
+
+        <div class="fila-campos">
+          <div class="campo">
+            <label>Raza</label>
+            <select id="nlRaza" onchange="if(this.value==='__otra__')document.getElementById('nlRazaOtra').style.display='block'; else document.getElementById('nlRazaOtra').style.display='none';"></select>
+            <input type="text" id="nlRazaOtra" placeholder="Escribe el nombre de la raza" style="display:none; margin-top:6px;">
+          </div>
+        </div>
+
+        <div class="fila-campos" id="nlAvesSimple">
+          <div class="campo"><label>Número de aves</label><input type="number" id="nlNumAves" placeholder="Ej: 4800"></div>
+          <div class="campo"><label>Precio por ave (bb)</label><input type="number" step="0.01" id="nlPrecioAve" placeholder="Ej: 0.43"></div>
+        </div>
+        <div class="fila-campos" id="nlAvesDoble" style="display:none;">
+          <div class="campo"><label>Número de hembras</label><input type="number" id="nlNumHembras" placeholder="Ej: 4940"></div>
+          <div class="campo"><label>Número de machos</label><input type="number" id="nlNumMachos" placeholder="Ej: 490"></div>
+          <div class="campo"><label>Precio por ave (bb)</label><input type="number" step="0.01" id="nlPrecioAveRepro" placeholder="Ej: 0.43"></div>
+        </div>
+
+        <button type="submit">Crear lote</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- TAB CONFIGURACIÓN -->
+  <section id="tab-config" class="tab-content">
+    <div class="panel">
+      <h3>Tipos de crianza</h3>
+      <div class="sub">Los tipos disponibles al configurar un lote nuevo</div>
+      <div id="listaTiposCrianza"></div>
+      <div class="fila-campos">
+        <div class="campo"><label>Nuevo tipo de crianza</label><input type="text" id="nuevoTipoCrianza" placeholder="Ej: Pavos de engorde"></div>
+      </div>
+      <button onclick="agregarTipoCrianza()">+ Agregar tipo</button>
+    </div>
+
+    <div class="panel">
+      <h3>Usuarios</h3>
+      <div class="sub">Asigna cada usuario a una granja y, si es galponero, a un galpón específico</div>
+      <div id="listaUsuarios"></div>
+      <button onclick="toggleFormNuevoUsuario()">+ Agregar usuario</button>
+    </div>
+
+    <div class="panel" id="panelNuevoUsuario" style="display:none; max-width:460px;">
+      <h3>Agregar usuario</h3>
+      <form onsubmit="event.preventDefault(); guardarUsuario();">
+        <div class="fila-campos">
+          <div class="campo"><label>Nombre</label><input type="text" id="uNombre" placeholder="Ej: Juan Pérez"></div>
+          <div class="campo"><label>Rol</label>
+            <select id="uRol" onchange="actualizarCamposUsuario()">
+              <option value="admin">Administrador</option>
+              <option value="supervisor">Supervisor</option>
+              <option value="galponero">Galponero</option>
+            </select>
+          </div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo"><label>Granja</label>
+            <select id="uGranja" onchange="actualizarGalponesUsuario()"></select>
+          </div>
+          <div class="campo" id="campoGalponUsuario">
+            <label>Galpón asignado</label>
+            <select id="uGalpon"></select>
+          </div>
+        </div>
+        <button type="submit">Guardar usuario</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h3>Razas y guía de crecimiento</h3>
+      <div class="sub">Las tablas base que se comparan contra el desempeño real de cada lote en las gráficas</div>
+      <div id="listaRazas"></div>
+    </div>
+
+    <div class="panel" id="panelNuevaRaza" style="display:none;">
+      <h3 id="tituloNuevaRaza">Agregar / editar raza</h3>
+      <div class="sub">Guía de crecimiento y tabla de manejo (vacunas y medicinas programadas)</div>
+      <form onsubmit="event.preventDefault(); guardarNuevaRaza();">
+        <div class="fila-campos">
+          <div class="campo">
+            <label>Nombre de la raza</label>
+            <input type="text" id="razaNombre" placeholder="Ej: Cobb 500">
+          </div>
+          <div class="campo">
+            <label>Tipo de ave</label>
+            <select id="razaTipo">
+              <option value="engorde">Engorde</option>
+              <option value="ponedora">Ponedora — huevo comercial</option>
+              <option value="reproductora">Reproductora — huevo fértil</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sub" style="margin:14px 0 8px; font-weight:600;">Guía de crecimiento — semana por semana</div>
+        <table class="tabla-secciones" id="tablaGuiaNuevaRaza">
+          <tr>
+            <th>Semana</th>
+            <th>Peso esperado (g)</th>
+            <th>Temp. ideal (°C)</th>
+            <th>Mortalidad acum. (%)</th>
+            <th>Consumo acum. (g/ave)</th>
+            <th>Producción (%)</th>
+            <th></th>
+          </tr>
+        </table>
+        <button type="button" class="btn-secundario" onclick="agregarFilaGuia()">+ Agregar semana</button>
+
+        <div class="sub" style="margin:18px 0 8px; font-weight:600;">Tabla de manejo — vacunas y medicinas programadas</div>
+        <div class="sub" style="margin-bottom:10px;">El día 1 es la fecha de ingreso del lote. Esto activa el semáforo de cumplimiento.</div>
+        <table class="tabla-secciones" id="tablaManejoNuevaRaza">
+          <tr>
+            <th>Día de vida</th>
+            <th>Producto</th>
+            <th>Dosis / vía</th>
+            <th></th>
+          </tr>
+        </table>
+        <button type="button" class="btn-secundario" onclick="agregarFilaManejo()">+ Agregar aplicación</button>
+
+        <div style="margin-top:18px; display:flex; gap:10px;">
+          <button type="submit">Guardar raza</button>
+          <button type="button" class="btn-secundario" onclick="document.getElementById('panelNuevaRaza').style.display='none'">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- TAB REGISTROS -->
+  <section id="tab-registros" class="tab-content">
+    <div class="volver" onclick="volverAGalpones()">← Volver a Galpones</div>
+
+    <!-- MODO REPRODUCTORA -->
+    <div id="modoReproductora">
+      <div class="panel" id="panelSemana">
+        <div class="panel-header-con-boton">
+          <h3>Semana 
+            <button class="btn-mini" onclick="cambiarSemana(-1)">◀</button> 
+            <span class="semana-num">36</span> 
+            <button class="btn-mini" onclick="cambiarSemana(1)">▶</button> 
+            — <span id="loteNombreTitulo">Lote 4 (reproductor)</span>
+          </h3>
+        </div>
+        <div class="sub">Vista tipo papel · los días con candado ya están guardados y no se pueden editar</div>
+        <div class="aviso-scroll-movil">👉 Desliza la tabla hacia los lados para ver todas las columnas</div>
+        <div class="tabla-scroll">
+          <table class="tabla-semana" id="tablaSemana">
+            <tr>
+              <th>Día</th><th>Mort. H</th><th>Saldo H</th><th>Mort. M</th><th>Saldo M</th>
+              <th>Ing. alim (kg)</th><th>Cons. alim (kg)</th><th>Saldo alim (kg)</th>
+              <th>Fértil</th><th>Comercial</th><th>Extra</th><th>Rota</th><th>Total</th><th>%</th>
+            </tr>
+            <tbody id="filasSemana"></tbody>
+            <tr class="fila-total">
+              <td>TOTAL</td><td id="totMortH"></td><td></td><td id="totMortM"></td><td></td>
+              <td id="totIng"></td><td id="totCons"></td><td></td>
+              <td id="totFer"></td><td id="totCom"></td><td id="totExt"></td><td id="totRot"></td>
+              <td id="totHuevosSem"></td><td id="pctSem"></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="panelHoy">
+        <h3 id="tituloHoy">Registrar hoy</h3>
+        <button id="btnAbrirHoy" onclick="abrirFormHoy()">Capturar registro de hoy</button>
+        <form id="formHoy" style="display:none; margin-top:16px;" onsubmit="event.preventDefault(); guardarHoy();">
+          <div class="seccion-titulo">Mortalidad y saldo por sección</div>
+          <div class="tabla-scroll">
+            <table class="tabla-secciones" id="tablaSeccionesHoy">
+              <tr><th>Sección</th><th>Mort. H</th><th>Saldo H</th><th>Mort. M</th><th>Saldo M</th></tr>
+              <tr>
+                <td>Sección 1 (~1750 g)</td>
+                <td><input type="number" class="mortH" data-saldoant="2100" value="0" oninput="calcular()"></td>
+                <td class="celda-auto saldoH"></td>
+                <td><input type="number" class="mortM" data-saldoant="205" value="0" oninput="calcular()"></td>
+                <td class="celda-auto saldoM"></td>
+              </tr>
+              <tr>
+                <td>Sección 2 (~1900 g)</td>
+                <td><input type="number" class="mortH" data-saldoant="1850" value="0" oninput="calcular()"></td>
+                <td class="celda-auto saldoH"></td>
+                <td><input type="number" class="mortM" data-saldoant="180" value="0" oninput="calcular()"></td>
+                <td class="celda-auto saldoM"></td>
+              </tr>
+              <tr>
+                <td>Sección 3 (~2050 g)</td>
+                <td><input type="number" class="mortH" data-saldoant="953" value="0" oninput="calcular()"></td>
+                <td class="celda-auto saldoH"></td>
+                <td><input type="number" class="mortM" data-saldoant="84" value="0" oninput="calcular()"></td>
+                <td class="celda-auto saldoM"></td>
+              </tr>
+              <tr>
+                <td>Enfermería</td>
+                <td><input type="number" class="mortH" data-saldoant="0" value="0" oninput="calcular()"></td>
+                <td class="celda-auto saldoH"></td>
+                <td><input type="number" class="mortM" data-saldoant="0" value="0" oninput="calcular()"></td>
+                <td class="celda-auto saldoM"></td>
+              </tr>
+              <tr class="fila-total">
+                <td>Total lote (automático)</td>
+                <td colspan="1"></td>
+                <td class="celda-auto" id="totalSaldoH"></td>
+                <td colspan="1"></td>
+                <td class="celda-auto" id="totalSaldoM"></td>
+              </tr>
+            </table>
+          </div>
+          <div class="fila-campos" style="margin-top:6px;">
+            <div class="campo"><label>Salida / venta hembras hoy</label><input type="number" id="salidaH" value="0" oninput="calcular()"></div>
+            <div class="campo"><label>Salida / venta machos hoy</label><input type="number" id="salidaM" value="0" oninput="calcular()"></div>
+          </div>
+          <div class="seccion-titulo">Consumo de alimento (silo del galpón)</div>
+          <div class="fila-campos">
+            <div class="campo"><label>Ingreso hoy (kg)</label><input type="number" id="ingAlim" value="0" oninput="calcular()"></div>
+            <div class="campo"><label>Consumo hoy (kg)</label><input type="number" id="consAlim" value="24" oninput="calcular()"></div>
+            <div class="campo campo-auto"><label>Saldo en silo (automático)</label><input type="text" id="saldoAlim" disabled></div>
+          </div>
+          <div class="seccion-titulo">Producción de huevos</div>
+          <div class="fila-campos">
+            <div class="campo"><label>Fértil</label><input type="number" id="fer" value="0" oninput="calcular()"></div>
+            <div class="campo"><label>Comercial</label><input type="number" id="com" value="0" oninput="calcular()"></div>
+            <div class="campo"><label>Extra</label><input type="number" id="ext" value="0" oninput="calcular()"></div>
+            <div class="campo"><label>Rota</label><input type="number" id="rot" value="0" oninput="calcular()"></div>
+          </div>
+          <div class="fila-campos">
+            <div class="campo campo-auto"><label>Total (automático)</label><input type="text" id="totalHuevos" disabled></div>
+            <div class="campo campo-auto"><label>% producción (automático)</label><input type="text" id="pctHuevos" disabled></div>
+          </div>
+          <div class="seccion-titulo">Novedades (opcional)</div>
+          <div class="campo"><input type="text" id="novedadesHoy" placeholder="Ej: comportamiento normal"></div>
+          <button type="submit">Guardar registro de hoy</button>
+        </form>
+        <div class="rol-nota">Vista rol <b>galponero</b>: solo puede crear el registro del día actual. Una vez guardado, queda bloqueado.</div>
+      </div>
+
+      <div class="panel" id="panelFinalizarRepro">
+        <h3>Finalizar lote</h3>
+        <div class="sub">Cierra el ciclo por completo: ya no se podrá capturar ni editar nada de este lote.</div>
+        <button onclick="finalizarLote()" class="btn-peligro">Finalizar lote</button>
+      </div>
+    </div>
+
+    <!-- MODO SIMPLE -->
+    <div id="modoSimple" style="display:none;">
+      <div class="panel">
+        <h3 id="loteNombreTituloSimple">Galpón B — Lote 1</h3>
+        <div class="sub">Vista tipo papel · los días con candado ya están guardados · <b>Haz clic en una semana para expandirla</b></div>
+        <div class="aviso-scroll-movil">👉 Desliza las tablas hacia los lados para ver todas las columnas</div>
+              <!-- NUEVA VISTA TÁCTIL PARA EL GALPONERO -->
+            <!-- VISTA TÁCTIL PARA EL GALPONERO -->
+      <div id="vistaGalponeroTactil" class="vista-tactil" style="display:none;">
+  
+               <div class="header-tactil">
+          <h2 id="nombreGranjaTactil">Cargando...</h2>
+          <div class="selector-fecha">
+            <button onclick="cambiarDiaTactil(-1)">◀</button>
+            <span id="fechaTactilHoy">Cargando...</span>
+            <button onclick="cambiarDiaTactil(1)">▶</button>
+          </div>
+        </div>
+
+        <!-- Contenedor dinámico para los botones de galpones (se llena solo si hay más de 1) -->
+        <div class="tabs-tactil" id="tabsGalponesTactil" style="margin-top: 10px;"></div>
+
+        <!-- Pestañas de Tareas (Se generan dinámicamente con JS) -->
+        <div class="tabs-tactil sub-tabs" id="tabsTareasTactil"></div>
+
+        <!-- Información del Lote -->
+        <div class="info-lote-tactil">
+          <div><span>Galpón:</span> <strong id="tactilGalponNombre">Galpón 1</strong></div>
+          <div><span>Lote:</span> <strong id="tactilLoteNum">1</strong></div>
+          <div><span>Nº aves:</span> <strong id="tactilNumAves">1,000</strong></div>
+          <div><span>Raza:</span> <strong id="tactilRaza">Ross 308</strong></div>
+          <div><span>Tipo:</span> <strong id="tactilTipo">Engorde</strong></div>
+        </div>
+
+        <!-- ================= PESTAÑA: CONSUMO ================= -->
+                <!-- ================= PESTAÑA: CONSUMO ================= -->
+        <div id="tareaConsumo" class="grid-tactil-nuevo" style="display:none;">
+          <div class="fila-tactil">
+            <div class="label-tactil">CONSUMO ALIMENTO A (KG)</div>
+            <div class="botonera-tactil">
+              <button type="button" onclick="restarTactil('tactilCons', 5)">−</button>
+              <input type="number" id="tactilCons" value="0" inputmode="numeric">
+              <button type="button" onclick="sumarTactil('tactilCons', 5)">+</button>
+            </div>
+          </div>
+          
+          <div class="fila-tactil">
+            <div class="label-tactil">CONSUMO ALIMENTO B (KG)</div>
+            <div class="botonera-tactil">
+              <button type="button" onclick="restarTactil('tactilCons2', 5)">−</button>
+              <input type="number" id="tactilCons2" value="0" inputmode="numeric">
+              <button type="button" onclick="sumarTactil('tactilCons2', 5)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= PESTAÑA: MORTALIDAD ================= -->
+        <div id="tareaMortalidad" class="grid-tactil-nuevo" style="display:none;">
+          <div class="fila-tactil">
+            <div class="label-tactil">MORTALIDAD HEMBRAS</div>
+            <div class="botonera-tactil">
+              <button type="button" onclick="restarTactil('tactilMortH')">−</button>
+              <input type="number" id="tactilMortH" value="0" inputmode="numeric">
+              <button type="button" onclick="sumarTactil('tactilMortH')">+</button>
+            </div>
+          </div>
+          
+          <!-- Este bloque solo se mostrará si es Reproductora -->
+          <div class="fila-tactil" id="filaMortMachos" style="display:none;">
+            <div class="label-tactil">MORTALIDAD MACHOS</div>
+            <div class="botonera-tactil">
+              <button type="button" onclick="restarTactil('tactilMortM')">−</button>
+              <input type="number" id="tactilMortM" value="0" inputmode="numeric">
+              <button type="button" onclick="sumarTactil('tactilMortM')">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= PESTAÑA: PRODUCCIÓN ================= -->
+        <div id="tareaProduccion" class="grid-tactil-nuevo" style="display:none;">
+          <div id="contenedorHuevos"></div>
+          <div class="fila-tactil" style="background: var(--azul-claro); margin-top: 10px;">
+            <div class="label-tactil">TOTAL</div>
+            <div class="botonera-tactil">
+              <span id="tactilTotalHuevos" style="font-size: 24px; font-weight: bold; color: var(--azul-profundo); padding: 0 20px;">0</span>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <!-- ================= PESTAÑA: MEDICACIÓN ================= -->
+                <div id="tareaMedicacion" class="grid-tactil-nuevo" style="display:none;">
+          <!-- Envolver todo en este div -->
+          <div style="width: 100%; max-width: 100%;">
+            <div class="fila-tactil">
+              <div class="label-tactil" style="flex: 1.5;">MEDICAMENTO</div>
+              <div class="label-tactil" style="text-align:center;">DOSIS</div>
+            </div>
+            <div class="fila-tactil">
+              <div class="selector-tactil">
+                <select id="tactilMedSelect"><option value="">Seleccione...</option></select>
+              </div>
+              <div class="botonera-tactil">
+                <button type="button" onclick="restarTactil('tactilMedCant', 100)">−</button>
+                <input type="number" id="tactilMedCant" value="0" step="100">
+                <button type="button" onclick="sumarTactil('tactilMedCant', 100)">+</button>
+              </div>
+            </div>
+            <button type="button" class="btn-add-med" style="width: 100%; margin-top:10px;" onclick="agregarMedicinaTactil()">+ Añadir a la lista</button>
+            <div id="listaMedicinasTactil" style="margin-top: 15px;"></div>
+          </div>
+        </div>
+
+        <!-- ================= PESTAÑA: OTROS ================= -->
+        <div id="tareaOtros" class="grid-tactil-nuevo" style="display:none;">
+          <div class="fila-tactil">
+            <div class="label-tactil">PESO PROMEDIO (G)</div>
+            <div class="botonera-tactil">
+              <button type="button" onclick="restarTactil('tactilPeso', 50)">−</button>
+              <input type="number" id="tactilPeso" value="0" inputmode="numeric">
+              <button type="button" onclick="sumarTactil('tactilPeso', 50)">+</button>
+            </div>
+          </div>
+          <div class="fila-tactil">
+            <div class="label-tactil">TEMPERATURA °C</div>
+            <div class="botonera-tactil">
+              <button type="button" onclick="restarTactil('tactilTemp')">−</button>
+              <input type="number" id="tactilTemp" value="0" inputmode="numeric">
+              <button type="button" onclick="sumarTactil('tactilTemp')">+</button>
+            </div>
+          </div>
+          <div class="fila-tactil">
+            <div class="label-tactil">HUMEDAD %</div>
+            <div class="botonera-tactil">
+              <button type="button" onclick="restarTactil('tactilHumedad', 5)">−</button>
+              <input type="number" id="tactilHumedad" value="0" inputmode="numeric">
+              <button type="button" onclick="sumarTactil('tactilHumedad', 5)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTONES DE ACCIÓN -->
+
+
+
+
+        <div class="acciones-tactil" id="botonesAccionTactil" style="display:none;">
+          <button class="btn-cancelar-tactil" onclick="volverAGalpones()">Cancelar</button>
+          <button class="btn-guardar-tactil" onclick="guardarTactil()">Guardar</button>
+        </div>
+      </div>
+        <div id="semanasContainer" class="semanas-container"></div>
+      </div>
+
+      <div class="panel" id="panelCalendarioManejo" style="display:none;">
+        <h3>Calendario de manejo</h3>
+        <div class="sub">Vacunas y medicinas programadas para esta raza, comparadas contra lo aplicado realmente</div>
+        <div id="contenidoCalendarioManejo"></div>
+      </div>
+
+      <div class="panel" id="panelFinalizarSimple">
+        <h3>Finalizar lote</h3>
+        <div class="sub">Cierra el ciclo por completo: ya no se podrá capturar ni editar nada de este lote.</div>
+        <button onclick="finalizarLote()" class="btn-peligro">Finalizar lote</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- MODAL DE EDICIÓN -->
+<div class="modal-overlay" id="modalEdicion">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalTitulo">✏️ Editando Día</h3>
+      <button class="btn-cerrar-modal" onclick="cerrarModal()">×</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
