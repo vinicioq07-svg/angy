@@ -22,7 +22,14 @@ const diasSemana = ['Sáb 06','Dom 07','Lun 08','Mar 09','Mié 10','Jue 11','Vie
 // INICIALIZACIÓN DE SUPABASE
 const SUPABASE_URL = 'https://mwvswuddpqbjzpzceacf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oF-OhoAeyQPpV3r785lGjQ_ynzhqNZA';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    storage: window.localStorage, // Guarda la sesión en el celular
+    autoRefreshToken: true,
+    persistSession: true,          // Mantiene la sesión activa
+    detectSessionInUrl: false
+  }
+});
 // ============================================================
 //  DATOS DE EJEMPLO
 // ============================================================
@@ -2905,7 +2912,6 @@ async function iniciarSesion() {
     return;
   }
 
-  // Cambiamos el texto del botón mientras carga
   const btn = document.querySelector('#formLogin button');
   const textoOriginal = btn.textContent;
   btn.textContent = 'Verificando...';
@@ -2920,21 +2926,23 @@ async function iniciarSesion() {
 
     if (authError) throw authError;
 
-    // 2. Buscamos el perfil del usuario en nuestra tabla 'usuarios' para saber su rol
+    // 2. Buscamos el perfil del usuario en nuestra tabla 'usuarios'
     const { data: userData, error: userError } = await supabaseClient
       .from('usuarios')
       .select('*')
       .eq('email', email)
       .maybeSingle();
 
-    if (userError || !userData) {
-      // Si el usuario existe en Auth pero no en nuestra tabla, lo tratamos como admin por defecto para la prueba
-      mostrarToast('Usuario autenticado (perfil no encontrado, entrando como Admin).', 'info');
-      completarLogin('admin');
-    } else {
+    let rolFinal = 'admin'; // Por defecto
+
+    if (userData) {
+      rolFinal = userData.rol;
       mostrarToast(`¡Bienvenido, ${userData.nombre}!`, 'exito');
-      completarLogin(userData.rol);
+    } else {
+      mostrarToast('Usuario autenticado (perfil no encontrado, entrando como Admin).', 'info');
     }
+
+    completarLogin(rolFinal);
 
   } catch (err) {
     console.error(err);
@@ -2944,7 +2952,6 @@ async function iniciarSesion() {
     btn.disabled = false;
   }
 }
-
 async function completarLogin(rol) {
   // 🔥 TRUCO: En lugar de mostrar el dashboard, mostramos un mensaje de "Cargando..."
   document.getElementById('pantallaLogin').style.display = 'none';
@@ -3152,21 +3159,41 @@ Object.assign(window, {
   mostrarToast,
 });
 
-// Verificar Chart.js
-if (typeof Chart === 'undefined' || _chartError){
-  _chartError = true;
-  console.warn('Chart.js no disponible. Las gráficas no se mostrarán.');
+// ============================================================
+//  VERIFICACIÓN DE SESIÓN AL ARRANCAR (MODO OFFLINE)
+// ============================================================
+async function verificarSesionActiva() {
+  // 1. Mostramos la pantalla de login por defecto (por si no hay sesión)
+  document.getElementById('pantallaLogin').style.display = 'flex';
+
+  // 2. Intentamos recuperar la sesión del almacenamiento local
+  const { data: { session }, error } = await supabaseClient.auth.getSession();
+
+  if (session && session.user) {
+    // ¡Hay una sesión guardada! (El galponero ya se logueó antes en este dispositivo)
+    console.log("Sesión activa encontrada. Entrando sin pedir contraseña...");
+    
+    // Buscamos su rol (si no hay internet, usamos 'admin' como respaldo)
+    let rol = 'admin';
+    try {
+      const { data: userData } = await supabaseClient
+        .from('usuarios')
+        .select('rol')
+        .eq('email', session.user.email)
+        .maybeSingle();
+        
+      if (userData) rol = userData.rol;
+    } catch (e) {
+      console.warn("No se pudo consultar el rol (offline). Usando rol por defecto.");
+    }
+
+    document.getElementById('pantallaLogin').style.display = 'none';
+    completarLogin(rol);
+  } else {
+    // No hay sesión guardada, mostramos el login normal
+    console.log("No hay sesión activa. Mostrando login.");
+  }
 }
 
-// Inicialización
-// Al cargar la página, nos aseguramos de que el login esté visible
-document.getElementById('pantallaLogin').style.display = 'flex';
-renderGridGalpones();
-actualizarSelectorGranja();
-aplicarRol();
-renderListaTiposCrianza();
-renderListaRazas();
-renderListaUsuarios();
-actualizarEncabezados();
-renderizarSemana();
-renderDashboardResumen();
+// Arrancamos la app llamando al verificador
+verificarSesionActiva();
