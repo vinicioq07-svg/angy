@@ -769,26 +769,39 @@ function finalizarLote(){
 // ============================================================
 async function cargarRegistrosDelLote(loteId) {
   try {
-    // 1. Vamos a buscar a Supabase los registros de ese lote
+    // 1. Traemos el registro diario CON sus relaciones (consumos y medicinas)
     const { data, error } = await supabaseClient
       .from('registros_diarios')
-      .select('*')
+      .select(`
+        *,
+        registros_consumos ( producto_id, cantidad, productos(nombre) ),
+        medicinas_aplicadas ( producto_id, cantidad, productos(nombre) )
+      `)
       .eq('lote_id', loteId);
 
     if (error) throw error;
 
-    // 2. Vaciamos los datos viejos del lote para que no se mezclen
+    // 2. Vaciamos los datos viejos del lote
     registrosSimple[loteId] = {};
 
-    // 3. Formateamos los datos como los espera nuestra app
+    // 3. Formateamos los datos
     data.forEach(reg => {
-      // Convertimos la fecha de Supabase (YYYY-MM-DD) a nuestro formato
+      // Formateamos los consumos
+      const consumos = (reg.registros_consumos || []).map(c => ({
+        nombre: c.productos ? c.productos.nombre : 'Desconocido',
+        cantidad: c.cantidad
+      }));
+
+      // Formateamos las medicinas
+      const medicinas = (reg.medicinas_aplicadas || []).map(m => ({
+        nombre: m.productos ? m.productos.nombre : 'Desconocido',
+        cantidad: m.cantidad
+      }));
+
       registrosSimple[loteId][reg.fecha] = {
         mort: (reg.mortalidad_h || 0) + (reg.mortalidad_m || 0),
         mortH: reg.mortalidad_h || 0,
         mortM: reg.mortalidad_m || 0,
-        cons: (reg.consumo_alimento_a || 0) + (reg.consumo_alimento_b || 0),
-        cons2: reg.consumo_alimento_b || 0,
         peso: reg.peso_promedio_g,
         tempMax: reg.temp_max_c,
         humedad: reg.humedad_pct,
@@ -797,7 +810,8 @@ async function cargarRegistrosDelLote(loteId) {
         huevoFertil: reg.huevo_fertil || 0,
         huevoExtra: reg.huevo_extra || 0,
         huevoRoto: reg.huevo_roto || 0,
-        medicinas: [] // Por ahora vacío, luego lo conectamos
+        consumos: consumos,   // <-- ACÁ ESTÁ LA CLAVE
+        medicinas: medicinas  // <-- ACÁ ESTÁ LA CLAVE
       };
     });
 
