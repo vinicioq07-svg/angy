@@ -2647,6 +2647,7 @@ function actualizarFechaTactil() {
   const fechaObj = new Date(fechaTactilActual + 'T00:00:00');
   const contenedorBotones = document.getElementById('botonesAccionTactil');
   if (contenedorBotones) contenedorBotones.style.display = 'flex'; 
+  
   // Formatear fecha
   const opciones = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
   let texto = fechaObj.toLocaleDateString('es-ES', opciones);
@@ -2671,15 +2672,19 @@ function actualizarFechaTactil() {
   document.getElementById('tactilPeso').value = datos.peso || 0;
   document.getElementById('tactilTemp').value = datos.tempMax || 0;
   document.getElementById('tactilHumedad').value = datos.humedad || 0;
+  
+  // 🔥 Cargar consumos y medicinas
   consumosTactilesTemp = datos.consumos ? [...datos.consumos] : [];
-renderizarConsumoTactil();
+  renderizarConsumoTactil();
+  
   medicinasTactilesTemp = datos.medicinas ? [...datos.medicinas] : [];
   renderizarMedicinasTactiles();
 
   // 🔒 LÓGICA DE BLOQUEO (SI YA SE GUARDÓ)
   const yaGuardado = !!entradas[fechaTactilActual];
-  const inputs = ['tactilMortH', 'tactilMortM', 'tactilCons', 'tactilCons2', 'tactilPeso', 'tactilTemp', 'tactilHumedad'];
   
+  // Inputs numéricos que se bloquean
+  const inputs = ['tactilMortH', 'tactilMortM', 'tactilPeso', 'tactilTemp', 'tactilHumedad'];
   inputs.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -2688,7 +2693,18 @@ renderizarConsumoTactil();
     }
   });
 
-  // Ocultar los botones de + y - y el botón de guardar
+  // Selectores de Consumo y Medicación
+  const selectConsumo = document.getElementById('tactilConsumoSelect');
+  const cantConsumo = document.getElementById('tactilConsumoCant');
+  const selectMed = document.getElementById('tactilMedSelect');
+  const cantMed = document.getElementById('tactilMedCant');
+  
+  if (selectConsumo) selectConsumo.disabled = yaGuardado;
+  if (cantConsumo) cantConsumo.disabled = yaGuardado;
+  if (selectMed) selectMed.disabled = yaGuardado;
+  if (cantMed) cantMed.disabled = yaGuardado;
+
+  // Ocultar los botones de + y - y los de añadir
   document.querySelectorAll('.botonera-tactil button').forEach(btn => {
     btn.style.display = yaGuardado ? 'none' : 'flex';
   });
@@ -2701,12 +2717,6 @@ renderizarConsumoTactil();
     btnGuardar.style.display = yaGuardado ? 'none' : 'block';
     btnGuardar.textContent = yaGuardado ? 'Día guardado' : 'Guardar';
   }
-
-  // Si está guardado, deshabilitar la selección de medicinas
-  const selectMed = document.getElementById('tactilMedSelect');
-  const cantMed = document.getElementById('tactilMedCant');
-  if (selectMed) selectMed.disabled = yaGuardado;
-  if (cantMed) cantMed.disabled = yaGuardado;
 
   // Al final de todo, actualizamos el total
   actualizarTotalHuevos();
@@ -2852,11 +2862,9 @@ async function guardarTactil() {
   const g = loteActual;
   if (!g) return;
 
-  // 1. Capturar todos los valores
+  // 1. Capturar valores principales
   const mortH = parseInt(document.getElementById('tactilMortH')?.value) || 0;
   const mortM = parseInt(document.getElementById('tactilMortM')?.value) || 0;
-  const cons = parseFloat(document.getElementById('tactilCons')?.value) || 0;
-  const cons2 = parseFloat(document.getElementById('tactilCons2')?.value) || 0;
   const peso = parseFloat(document.getElementById('tactilPeso')?.value) || null;
   const temp = parseFloat(document.getElementById('tactilTemp')?.value) || null;
   const humedad = parseFloat(document.getElementById('tactilHumedad')?.value) || null;
@@ -2869,7 +2877,7 @@ async function guardarTactil() {
     huevoRoto = parseInt(document.getElementById('tactilHuevoRoto')?.value) || 0;
   }
 
-  // 2. Validación
+  // 2. Validación de saldo
   const entradas = registrosSimple[g.id] || (registrosSimple[g.id] = {});
   let saldoActual = g.tipo === 'reproductora' ? (g.numInicialH + g.numInicialM) : g.numInicial;
   const claves = Object.keys(entradas).filter(k => k < fechaTactilActual).sort();
@@ -2882,14 +2890,12 @@ async function guardarTactil() {
     return;
   }
 
-  // 3. Crear el objeto de registro
+  // 3. Objeto de registro (sin los consumos, que van aparte)
   const nuevoRegistro = {
     lote_id: g.id,
     fecha: fechaTactilActual,
     mortalidad_h: mortH,
     mortalidad_m: mortM,
-    consumo_alimento_a: cons,
-    consumo_alimento_b: cons2,
     peso_promedio_g: peso,
     temp_max_c: temp,
     humedad_pct: humedad,
@@ -2899,35 +2905,77 @@ async function guardarTactil() {
     huevo_roto: huevoRoto
   };
 
-  // 4. Guardado local inmediato (UI)
+  // 4. Guardado local (UI) — ACÁ ESTÁ LA CLAVE PARA QUE NO DESAPAREZCAN
   const previo = entradas[fechaTactilActual] || {};
   entradas[fechaTactilActual] = {
-    ...previo, mortH, mortM, cons, cons2, peso, tempMax: temp, humedad,
-    medicinas: medicinasTactilesTemp, huevoComercial, huevoFertil, huevoExtra, huevoRoto
+    ...previo, mortH, mortM, peso, tempMax: temp, humedad,
+    consumos: consumosTactilesTemp, // <--- GUARDAMOS LOS CONSUMOS
+    medicinas: medicinasTactilesTemp, 
+    huevoComercial, huevoFertil, huevoExtra, huevoRoto
   };
+  
   actualizarFechaTactil(); 
   mostrarToast('Guardando...', 'info');
 
-  // 5. Intentar guardar en SUPABASE (Nube)
+  // 5. Intentar guardar en SUPABASE
   try {
-    const { error } = await supabaseClient
+    // A. Insertar/Actualizar el registro diario
+    const { data: regData, error: regError } = await supabaseClient
       .from('registros_diarios')
-      .upsert([nuevoRegistro], { onConflict: 'lote_id, fecha' });
+      .upsert([nuevoRegistro], { onConflict: 'lote_id, fecha' })
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (regError) throw regError;
+
+    const registroId = regData.id;
+
+    // B. Borrar consumos viejos de este día y guardar los nuevos
+    await supabaseClient.from('registros_consumos').delete().eq('registro_id', registroId);
     
+    if (consumosTactilesTemp.length > 0) {
+      const consumosAInsertar = consumosTactilesTemp.map(c => {
+        const prod = productosDisponibles.find(p => p.nombre === c.nombre);
+        return {
+          registro_id: registroId,
+          producto_id: prod ? prod.id : null,
+          cantidad: c.cantidad
+        };
+      });
+      await supabaseClient.from('registros_consumos').insert(consumosAInsertar);
+    }
+
+    // C. Borrar medicinas viejas de este día y guardar las nuevas
+    await supabaseClient.from('medicinas_aplicadas').delete().eq('registro_id', registroId);
+    
+    if (medicinasTactilesTemp.length > 0) {
+      const medicinasAInsertar = medicinasTactilesTemp.map(m => {
+        const prod = productosDisponibles.find(p => p.nombre === m.nombre);
+        return {
+          registro_id: registroId,
+          producto_id: prod ? prod.id : null,
+          cantidad: m.cantidad
+        };
+      });
+      await supabaseClient.from('medicinas_aplicadas').insert(medicinasAInsertar);
+    }
+
     mostrarToast('¡Sincronizado con la nube exitosamente!', 'exito');
 
   } catch (err) {
     console.warn("Sin conexión. Guardando en cola de sincronización.", err);
     
-    // 6. Modo Offline: Guardar en LocalStorage si falla la nube
+    // 6. Modo Offline: Guardar en LocalStorage (incluyendo consumos y medicinas)
     let colaPendientes = JSON.parse(localStorage.getItem('angy_cola_pendientes') || '[]');
     colaPendientes = colaPendientes.filter(item => !(item.lote_id === g.id && item.fecha === fechaTactilActual));
-    colaPendientes.push(nuevoRegistro);
+    colaPendientes.push({
+      ...nuevoRegistro,
+      consumos: consumosTactilesTemp,
+      medicinas: medicinasTactilesTemp
+    });
     localStorage.setItem('angy_cola_pendientes', JSON.stringify(colaPendientes));
     
-    mostrarToast('Sin internet. Guardado seguro en el celular. Se enviará luego.', 'advertencia', 5000);
+    mostrarToast('Sin internet. Guardado seguro en el celular.', 'advertencia', 5000);
   }
 }
 
