@@ -7,6 +7,8 @@
 // ============================================================
 //  VARIABLES GLOBALES
 // ============================================================
+let productosDisponibles = []; 
+let consumosTactilesTemp = [];
 let semanaActual = 36;
 let loteActual = null;
 let rolActual = 'admin';
@@ -2524,10 +2526,20 @@ function inicializarVistaTactil() {
   document.getElementById('vistaGalponeroTactil').style.display = 'block';
   document.getElementById('semanasContainer').style.display = 'none'; 
 
-  const select = document.getElementById('tactilMedSelect');
-  if (select) {
-    select.innerHTML = '<option value="">Seleccione...</option>' + 
-      catalogoMedicinas.map(m => `<option value="${m}">${m}</option>`).join('');
+    // Llenar el select de Consumo (Solo categoría 'alimento')
+  const selectConsumo = document.getElementById('tactilConsumoSelect');
+  if (selectConsumo) {
+    const alimentos = productosDisponibles.filter(p => p.categoria === 'alimento');
+    selectConsumo.innerHTML = '<option value="">Seleccione...</option>' + 
+      alimentos.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+  }
+
+  // Llenar el select de Medicinas (Solo categoría 'medicina')
+  const selectMed = document.getElementById('tactilMedSelect');
+  if (selectMed) {
+    const medicinas = productosDisponibles.filter(p => p.categoria === 'medicina');
+    selectMed.innerHTML = '<option value="">Seleccione...</option>' + 
+      medicinas.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
   }
 
   // 1. Generar dinámicamente las pestañas según el tipo de crianza
@@ -2656,12 +2668,11 @@ function actualizarFechaTactil() {
   
   document.getElementById('tactilMortH').value = datos.mortH || 0;
   document.getElementById('tactilMortM').value = datos.mortM || 0;
-  document.getElementById('tactilCons').value = datos.cons || 0;
-  document.getElementById('tactilCons2').value = datos.cons2 || 0;
   document.getElementById('tactilPeso').value = datos.peso || 0;
   document.getElementById('tactilTemp').value = datos.tempMax || 0;
   document.getElementById('tactilHumedad').value = datos.humedad || 0;
-  
+  consumosTactilesTemp = datos.consumos ? [...datos.consumos] : [];
+renderizarConsumoTactil();
   medicinasTactilesTemp = datos.medicinas ? [...datos.medicinas] : [];
   renderizarMedicinasTactiles();
 
@@ -3011,7 +3022,11 @@ async function cargarDatosDesdeNube() {
       semana: calcularSemanaDesdeIngreso(l.fecha_ingreso),
       semanaFinal: l.semana_final
     }));
-
+    // Cargar los productos/insumos
+    const { data: dbProductos } = await supabaseClient.from('productos').select('*');
+    if (dbProductos) {
+      productosDisponibles = dbProductos;
+    }
     // 4. LÓGICA EXCLUSIVA PARA GALPONERO
     if (rolActual === 'galponero') {
       const { data: { user } } = await supabaseClient.auth.getUser();
