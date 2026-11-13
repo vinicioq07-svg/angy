@@ -2779,7 +2779,52 @@ function agregarMedicinaTactil() {
   cantInput.value = 0;
   renderizarMedicinasTactiles();
 }
+// ============================================================
+//  FUNCIONES DE CONSUMO TÁCTIL
+// ============================================================
+function agregarConsumoATactil() {
+  const select = document.getElementById('tactilConsumoSelect');
+  const cantInput = document.getElementById('tactilConsumoCant');
+  const prod = select.value;
+  const cant = parseFloat(cantInput.value) || 0;
 
+  if (!prod) { mostrarToast('Selecciona un producto.', 'advertencia'); return; }
+  if (cant <= 0) { mostrarToast('La cantidad debe ser mayor a 0.', 'advertencia'); return; }
+
+  const existente = consumosTactilesTemp.findIndex(c => c.nombre === prod);
+  if (existente !== -1) {
+    consumosTactilesTemp[existente].cantidad += cant;
+  } else {
+    consumosTactilesTemp.push({ nombre: prod, cantidad: cant });
+  }
+
+  select.value = '';
+  cantInput.value = 0;
+  renderizarConsumoTactil();
+}
+
+function eliminarConsumoTactil(index) {
+  consumosTactilesTemp.splice(index, 1);
+  renderizarConsumoTactil();
+}
+
+function renderizarConsumoTactil() {
+  const cont = document.getElementById('listaConsumoTactil');
+  if (!cont) return;
+  
+  if (consumosTactilesTemp.length === 0) {
+    cont.innerHTML = '<div class="sub" style="text-align:center;">No hay consumos agregados para este día.</div>';
+    return;
+  }
+
+  cont.innerHTML = consumosTactilesTemp.map((c, i) => `
+    <div class="fila-tactil" style="background:var(--azul-claro); margin-bottom:5px;">
+      <div class="label-tactil" style="text-transform:none; font-weight:normal;">${c.nombre}</div>
+      <div style="font-weight:bold; font-size:18px; margin-right:15px;">${c.cantidad} kg</div>
+      <button type="button" onclick="eliminarConsumoTactil(${i})" style="background:var(--rojo); color:white; width:35px; height:35px; border-radius:50%; border:none; font-size:16px; cursor:pointer;">✕</button>
+    </div>
+  `).join('');
+}
 function eliminarMedicinaTactil(index) {
   medicinasTactilesTemp.splice(index, 1);
   renderizarMedicinasTactiles();
@@ -3161,6 +3206,9 @@ Object.assign(window, {
   agregarMedicinaTactil,
   eliminarMedicinaTactil,
   iniciarSesion,
+  agregarConsumoATactil,
+  eliminarConsumoTactil,
+  renderizarConsumoTactil,
   cerrarSesion,
   // Razas
   toggleFormNuevaRaza,
