@@ -497,28 +497,30 @@
           <div><span>Tipo:</span> <strong id="tactilTipo">Engorde</strong></div>
         </div>
 
-                <!-- ================= PESTAÑA: CONSUMO ================= -->
+        <!-- ================= PESTAÑA: CONSUMO ================= -->
         <div id="tareaConsumo" class="grid-tactil-nuevo" style="display:none;">
-          <div class="fila-tactil">
-            <div class="label-tactil" style="flex: 1.5;">PRODUCTO / INSUMO</div>
-            <div class="label-tactil" style="text-align:center;">CANTIDAD</div>
-          </div>
           
-          <div class="fila-tactil">
-            <div class="selector-tactil">
-              <select id="tactilConsumoSelect">
-                <option value="">Seleccione...</option>
-              </select>
+          <!-- ESTE DIV SE OCULTARÁ CUANDO YA ESTÉ GUARDADO -->
+          <div id="zonaIngresoConsumo">
+            <div class="fila-tactil">
+              <div class="label-tactil" style="flex: 1.5;">PRODUCTO / INSUMO</div>
+              <div class="label-tactil" style="text-align:center;">CANTIDAD</div>
             </div>
-            <div class="botonera-tactil">
-              <button type="button" onclick="restarTactil('tactilConsumoCant', 5)">−</button>
-              <input type="number" id="tactilConsumoCant" value="0" step="5" inputmode="decimal">
-              <button type="button" onclick="sumarTactil('tactilConsumoCant', 5)">+</button>
+            <div class="fila-tactil">
+              <div class="selector-tactil">
+                <select id="tactilConsumoSelect">
+                  <option value="">Seleccione...</option>
+                </select>
+              </div>
+              <div class="botonera-tactil">
+                <button type="button" onclick="restarTactil('tactilConsumoCant', 5)">−</button>
+                <input type="number" id="tactilConsumoCant" value="0" step="5" inputmode="decimal">
+                <button type="button" onclick="sumarTactil('tactilConsumoCant', 5)">+</button>
+              </div>
             </div>
+            <button type="button" class="btn-add-med" style="margin-top:10px; height: 45px; font-size:16px; width: 100%; border-radius: 8px;" onclick="agregarConsumoATactil()">+ Añadir al registro</button>
           </div>
-          
-          <button type="button" class="btn-add-med" style="margin-top:10px; height: 45px; font-size:16px; width: 100%; border-radius: 8px;" onclick="agregarConsumoATactil()">+ Añadir al registro</button>
-          
+
           <div id="listaConsumoTactil" style="margin-top: 15px;"></div>
         </div>
 
@@ -557,26 +559,30 @@
         </div>
 
         <!-- ================= PESTAÑA: MEDICACIÓN ================= -->
-                <div id="tareaMedicacion" class="grid-tactil-nuevo" style="display:none;">
-          <!-- Envolver todo en este div -->
-          <div style="width: 100%; max-width: 100%;">
+        <div id="tareaMedicacion" class="grid-tactil-nuevo" style="display:none;">
+          
+          <!-- ESTE DIV SE OCULTARÁ CUANDO YA ESTÉ GUARDADO -->
+          <div id="zonaIngresoMedicacion">
             <div class="fila-tactil">
               <div class="label-tactil" style="flex: 1.5;">MEDICAMENTO</div>
               <div class="label-tactil" style="text-align:center;">DOSIS</div>
             </div>
             <div class="fila-tactil">
               <div class="selector-tactil">
-                <select id="tactilMedSelect"><option value="">Seleccione...</option></select>
+                <select id="tactilMedSelect">
+                  <option value="">Seleccione...</option>
+                </select>
               </div>
               <div class="botonera-tactil">
                 <button type="button" onclick="restarTactil('tactilMedCant', 100)">−</button>
-                <input type="number" id="tactilMedCant" value="0" step="100">
+                <input type="number" id="tactilMedCant" value="0" step="100" inputmode="decimal">
                 <button type="button" onclick="sumarTactil('tactilMedCant', 100)">+</button>
               </div>
             </div>
-            <button type="button" class="btn-add-med" style="width: 100%; margin-top:10px;" onclick="agregarMedicinaTactil()">+ Añadir a la lista</button>
-            <div id="listaMedicinasTactil" style="margin-top: 15px;"></div>
+            <button type="button" class="btn-add-med" style="margin-top:10px; height: 45px; font-size:16px; width: 100%; border-radius: 8px;" onclick="agregarMedicinaTactil()">+ Añadir a la lista</button>
           </div>
+
+          <div id="listaMedicinasTactil" style="margin-top: 15px;"></div>
         </div>
 
         <!-- ================= PESTAÑA: OTROS ================= -->

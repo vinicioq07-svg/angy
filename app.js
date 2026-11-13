@@ -2696,7 +2696,12 @@ function actualizarFechaTactil() {
 
   // 🔒 LÓGICA DE BLOQUEO (SI YA SE GUARDÓ)
   const yaGuardado = !!entradas[fechaTactilActual];
+    // 🔥 OCULTAR LAS ZONAS DE INGRESO
+  const zonaConsumo = document.getElementById('zonaIngresoConsumo');
+  const zonaMedicacion = document.getElementById('zonaIngresoMedicacion');
   
+  if (zonaConsumo) zonaConsumo.style.display = yaGuardado ? 'none' : 'block';
+  if (zonaMedicacion) zonaMedicacion.style.display = yaGuardado ? 'none' : 'block';
   // Inputs numéricos que se bloquean
   const inputs = ['tactilMortH', 'tactilMortM', 'tactilPeso', 'tactilTemp', 'tactilHumedad'];
   inputs.forEach(id => {
