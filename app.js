@@ -2846,11 +2846,15 @@ function renderizarConsumoTactil() {
     return;
   }
 
+  // Verificamos si el día ya está guardado
+  const entradas = registrosSimple[loteActual.id] || {};
+  const yaGuardado = !!entradas[fechaTactilActual];
+
   cont.innerHTML = consumosTactilesTemp.map((c, i) => `
     <div class="fila-tactil" style="background:var(--azul-claro); margin-bottom:5px;">
       <div class="label-tactil" style="text-transform:none; font-weight:normal;">${c.nombre}</div>
       <div style="font-weight:bold; font-size:18px; margin-right:15px;">${c.cantidad} kg</div>
-      <button type="button" onclick="eliminarConsumoTactil(${i})" style="background:var(--rojo); color:white; width:35px; height:35px; border-radius:50%; border:none; font-size:16px; cursor:pointer;">✕</button>
+      ${!yaGuardado ? `<button type="button" onclick="eliminarConsumoTactil(${i})" style="background:var(--rojo); color:white; width:35px; height:35px; border-radius:50%; border:none; font-size:16px; cursor:pointer;">✕</button>` : ''}
     </div>
   `).join('');
 }
@@ -2868,11 +2872,15 @@ function renderizarMedicinasTactiles() {
     return;
   }
 
+  // Verificamos si el día ya está guardado
+  const entradas = registrosSimple[loteActual.id] || {};
+  const yaGuardado = !!entradas[fechaTactilActual];
+
   cont.innerHTML = medicinasTactilesTemp.map((m, i) => `
     <div class="fila-tactil" style="background:var(--azul-claro); margin-bottom:5px;">
       <div class="label-tactil" style="text-transform:none; font-weight:normal;">${m.nombre}</div>
       <div style="font-weight:bold; font-size:18px; margin-right:15px;">${m.cantidad}</div>
-      <button type="button" onclick="eliminarMedicinaTactil(${i})" style="background:var(--rojo); color:white; width:35px; height:35px; border-radius:50%; border:none; font-size:16px; cursor:pointer;">✕</button>
+      ${!yaGuardado ? `<button type="button" onclick="eliminarMedicinaTactil(${i})" style="background:var(--rojo); color:white; width:35px; height:35px; border-radius:50%; border:none; font-size:16px; cursor:pointer;">✕</button>` : ''}
     </div>
   `).join('');
 }
