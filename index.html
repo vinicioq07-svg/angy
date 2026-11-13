@@ -497,26 +497,29 @@
           <div><span>Tipo:</span> <strong id="tactilTipo">Engorde</strong></div>
         </div>
 
-        <!-- ================= PESTAÑA: CONSUMO ================= -->
                 <!-- ================= PESTAÑA: CONSUMO ================= -->
         <div id="tareaConsumo" class="grid-tactil-nuevo" style="display:none;">
           <div class="fila-tactil">
-            <div class="label-tactil">CONSUMO ALIMENTO A (KG)</div>
-            <div class="botonera-tactil">
-              <button type="button" onclick="restarTactil('tactilCons', 5)">−</button>
-              <input type="number" id="tactilCons" value="0" inputmode="numeric">
-              <button type="button" onclick="sumarTactil('tactilCons', 5)">+</button>
-            </div>
+            <div class="label-tactil" style="flex: 1.5;">PRODUCTO / INSUMO</div>
+            <div class="label-tactil" style="text-align:center;">CANTIDAD</div>
           </div>
           
           <div class="fila-tactil">
-            <div class="label-tactil">CONSUMO ALIMENTO B (KG)</div>
+            <div class="selector-tactil">
+              <select id="tactilConsumoSelect">
+                <option value="">Seleccione...</option>
+              </select>
+            </div>
             <div class="botonera-tactil">
-              <button type="button" onclick="restarTactil('tactilCons2', 5)">−</button>
-              <input type="number" id="tactilCons2" value="0" inputmode="numeric">
-              <button type="button" onclick="sumarTactil('tactilCons2', 5)">+</button>
+              <button type="button" onclick="restarTactil('tactilConsumoCant', 5)">−</button>
+              <input type="number" id="tactilConsumoCant" value="0" step="5" inputmode="decimal">
+              <button type="button" onclick="sumarTactil('tactilConsumoCant', 5)">+</button>
             </div>
           </div>
+          
+          <button type="button" class="btn-add-med" style="margin-top:10px; height: 45px; font-size:16px; width: 100%; border-radius: 8px;" onclick="agregarConsumoATactil()">+ Añadir al registro</button>
+          
+          <div id="listaConsumoTactil" style="margin-top: 15px;"></div>
         </div>
 
         <!-- ================= PESTAÑA: MORTALIDAD ================= -->
