@@ -2890,7 +2890,7 @@ async function guardarTactil() {
     return;
   }
 
-  // 3. Objeto de registro (sin los consumos, que van aparte)
+  // 3. Objeto de registro
   const nuevoRegistro = {
     lote_id: g.id,
     fecha: fechaTactilActual,
@@ -2905,21 +2905,22 @@ async function guardarTactil() {
     huevo_roto: huevoRoto
   };
 
-  // 4. Guardado local (UI) — ACÁ ESTÁ LA CLAVE PARA QUE NO DESAPAREZCAN
+  // 🔥 PASO CLAVE: Guardar en local ANTES de ir a la nube (para que no desaparezca)
   const previo = entradas[fechaTactilActual] || {};
   entradas[fechaTactilActual] = {
-    ...previo, mortH, mortM, peso, tempMax: temp, humedad,
-    consumos: consumosTactilesTemp, // <--- GUARDAMOS LOS CONSUMOS
-    medicinas: medicinasTactilesTemp, 
+    ...previo, 
+    mortH, mortM, peso, tempMax: temp, humedad,
+    consumos: [...consumosTactilesTemp], // <-- GUARDAMOS LOS CONSUMOS
+    medicinas: [...medicinasTactilesTemp], 
     huevoComercial, huevoFertil, huevoExtra, huevoRoto
   };
   
   actualizarFechaTactil(); 
   mostrarToast('Guardando...', 'info');
 
-  // 5. Intentar guardar en SUPABASE
+  // 4. Intentar guardar en SUPABASE
   try {
-    // A. Insertar/Actualizar el registro diario
+    // A. Guardar registro diario
     const { data: regData, error: regError } = await supabaseClient
       .from('registros_diarios')
       .upsert([nuevoRegistro], { onConflict: 'lote_id, fecha' })
@@ -2930,42 +2931,48 @@ async function guardarTactil() {
 
     const registroId = regData.id;
 
-    // B. Borrar consumos viejos de este día y guardar los nuevos
-    await supabaseClient.from('registros_consumos').delete().eq('registro_id', registroId);
-    
-    if (consumosTactilesTemp.length > 0) {
-      const consumosAInsertar = consumosTactilesTemp.map(c => {
-        const prod = productosDisponibles.find(p => p.nombre === c.nombre);
-        return {
-          registro_id: registroId,
-          producto_id: prod ? prod.id : null,
-          cantidad: c.cantidad
-        };
-      });
-      await supabaseClient.from('registros_consumos').insert(consumosAInsertar);
+    // B. Guardar consumos (con try/catch interno para no romper todo si falla)
+    try {
+      await supabaseClient.from('registros_consumos').delete().eq('registro_id', registroId);
+      if (consumosTactilesTemp.length > 0) {
+        const consumosAInsertar = consumosTactilesTemp.map(c => {
+          const prod = productosDisponibles.find(p => p.nombre === c.nombre);
+          return {
+            registro_id: registroId,
+            producto_id: prod ? prod.id : null,
+            cantidad: c.cantidad
+          };
+        });
+        const { error: errCons } = await supabaseClient.from('registros_consumos').insert(consumosAInsertar);
+        if (errCons) console.error("Error guardando consumos:", errCons);
+      }
+    } catch (e) {
+      console.error("Fallo en consumos, pero el registro diario se guardó:", e);
     }
 
-    // C. Borrar medicinas viejas de este día y guardar las nuevas
-    await supabaseClient.from('medicinas_aplicadas').delete().eq('registro_id', registroId);
-    
-    if (medicinasTactilesTemp.length > 0) {
-      const medicinasAInsertar = medicinasTactilesTemp.map(m => {
-        const prod = productosDisponibles.find(p => p.nombre === m.nombre);
-        return {
-          registro_id: registroId,
-          producto_id: prod ? prod.id : null,
-          cantidad: m.cantidad
-        };
-      });
-      await supabaseClient.from('medicinas_aplicadas').insert(medicinasAInsertar);
+    // C. Guardar medicinas
+    try {
+      await supabaseClient.from('medicinas_aplicadas').delete().eq('registro_id', registroId);
+      if (medicinasTactilesTemp.length > 0) {
+        const medicinasAInsertar = medicinasTactilesTemp.map(m => {
+          const prod = productosDisponibles.find(p => p.nombre === m.nombre);
+          return {
+            registro_id: registroId,
+            producto_id: prod ? prod.id : null,
+            cantidad: m.cantidad
+          };
+        });
+        await supabaseClient.from('medicinas_aplicadas').insert(medicinasAInsertar);
+      }
+    } catch (e) {
+      console.error("Fallo en medicinas, pero el registro diario se guardó:", e);
     }
 
     mostrarToast('¡Sincronizado con la nube exitosamente!', 'exito');
 
   } catch (err) {
-    console.warn("Sin conexión. Guardando en cola de sincronización.", err);
+    console.warn("Sin conexión o error. Guardando en cola.", err);
     
-    // 6. Modo Offline: Guardar en LocalStorage (incluyendo consumos y medicinas)
     let colaPendientes = JSON.parse(localStorage.getItem('angy_cola_pendientes') || '[]');
     colaPendientes = colaPendientes.filter(item => !(item.lote_id === g.id && item.fecha === fechaTactilActual));
     colaPendientes.push({
